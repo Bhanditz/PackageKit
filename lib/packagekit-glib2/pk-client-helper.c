@@ -442,6 +442,16 @@ pk_client_helper_start (PkClientHelper *client_helper,
 	g_debug ("using socket in %s", socket_filename);
 	priv->socket_file = g_file_new_for_path (socket_filename);
 
+	/* create socket */
+	priv->socket = g_socket_new (G_SOCKET_FAMILY_UNIX, G_SOCKET_TYPE_STREAM, G_SOCKET_PROTOCOL_DEFAULT, error);
+	if (priv->socket == NULL)
+		return FALSE;
+
+	/* bind to the socket */
+	address = g_unix_socket_address_new (socket_filename);
+	if (!g_socket_bind (priv->socket, address, TRUE, error))
+		return FALSE;
+
 	/* preconfigure KDE frontend, if requested */
 	if (envp != NULL) {
 		for (i = 0; envp[i] != NULL; i++) {
@@ -457,16 +467,6 @@ pk_client_helper_start (PkClientHelper *client_helper,
 	/* cache for actual start */
 	priv->argv = g_strdupv (argv);
 	priv->envp = g_strdupv (envp);
-
-	/* create socket */
-	priv->socket = g_socket_new (G_SOCKET_FAMILY_UNIX, G_SOCKET_TYPE_STREAM, G_SOCKET_PROTOCOL_DEFAULT, error);
-	if (priv->socket == NULL)
-		return FALSE;
-
-	/* bind to the socket */
-	address = g_unix_socket_address_new (socket_filename);
-	if (!g_socket_bind (priv->socket, address, TRUE, error))
-		return FALSE;
 
 	/* spawn KDE debconf communicator */
 	if (use_kde_helper) {
