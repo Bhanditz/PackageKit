@@ -416,7 +416,6 @@ pk_client_helper_start (PkClientHelper *client_helper,
 			gchar **argv, gchar **envp,
 			GError **error)
 {
-	gint fd;
 	PkClientHelperPrivate *priv = client_helper->priv;
 	g_autoptr(GError) error_local = NULL;
 	g_autoptr(GSocketAddress) address = NULL;
@@ -450,13 +449,53 @@ pk_client_helper_start (PkClientHelper *client_helper,
 	if (!g_socket_bind (priv->socket, address, TRUE, error))
 		return FALSE;
 
+	/* listen to the socket */
+	if (!g_socket_listen (priv->socket, error))
+		return FALSE;
+
+	return pk_client_helper_start_with_socket(client_helper, priv->socket,  argv, envp, error);
+}
+
+/**
+ * pk_client_helper_start_with_socket:
+ * @client_helper: a valid #PkClientHelper instance
+ * @socket: the (bound and listening) #GSocket instance to use
+ * @argv: the executable, along with any arguments
+ * @envp: the environment
+ * @error: A #GError or %NULL
+ *
+ * Starts the helper process, by running the helper process and setting
+ * up the socket for use.
+ *
+ * Return value: %TRUE for success
+ *
+ * Since: 1.1.11
+ **/
+gboolean
+pk_client_helper_start_with_socket (PkClientHelper *client_helper,
+				    GSocket *socket,
+				    gchar **argv, gchar **envp,
+				    GError **error)
+{
+	gint fd;
+	PkClientHelperPrivate *priv = client_helper->priv;
+	g_autoptr(GError) error_local = NULL;
+	g_autoptr(GSocketAddress) address = NULL;
+
+	g_return_val_if_fail (PK_IS_CLIENT_HELPER (client_helper), FALSE);
+	g_return_val_if_fail (socket != NULL, FALSE);
+	g_return_val_if_fail (argv != NULL, FALSE);
+	g_return_val_if_fail (error == NULL || *error == NULL, FALSE);
+
+	/* make sure not been started before */
+	g_return_val_if_fail (priv->argv == NULL, FALSE);
+
 	/* cache for actual start */
 	priv->argv = g_strdupv (argv);
 	priv->envp = g_strdupv (envp);
 
-	/* listen to the socket */
-	if (!g_socket_listen (priv->socket, error))
-		return FALSE;
+	/* Set the socket */
+	priv->socket = socket;
 
 	/* socket has data */
 	fd = g_socket_get_fd (priv->socket);
