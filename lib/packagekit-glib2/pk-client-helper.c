@@ -416,8 +416,6 @@ pk_client_helper_start (PkClientHelper *client_helper,
 			gchar **argv, gchar **envp,
 			GError **error)
 {
-	guint i;
-	gboolean use_kde_helper = FALSE;
 	gint fd;
 	PkClientHelperPrivate *priv = client_helper->priv;
 	g_autoptr(GError) error_local = NULL;
@@ -452,36 +450,9 @@ pk_client_helper_start (PkClientHelper *client_helper,
 	if (!g_socket_bind (priv->socket, address, TRUE, error))
 		return FALSE;
 
-	/* preconfigure KDE frontend, if requested */
-	if (envp != NULL) {
-		for (i = 0; envp[i] != NULL; i++) {
-			if (g_strcmp0 (envp[i], "DEBIAN_FRONTEND=kde") == 0) {
-				if (g_file_test ("/usr/bin/debconf-kde-helper",
-						 G_FILE_TEST_EXISTS)) {
-					use_kde_helper = TRUE;
-				}
-			}
-		}
-	}
-
 	/* cache for actual start */
 	priv->argv = g_strdupv (argv);
 	priv->envp = g_strdupv (envp);
-
-	/* spawn KDE debconf communicator */
-	if (use_kde_helper) {
-		priv->argv = g_new0 (gchar *, 2);
-		priv->argv[0] = g_strdup ("/usr/bin/debconf-kde-helper");
-		priv->argv[1] = g_strconcat ("--socket-path", "=", socket_filename, NULL);
-
-		if (!g_spawn_async (NULL, priv->argv, NULL, G_SPAWN_STDOUT_TO_DEV_NULL,
-			NULL, NULL, &priv->kde_helper_pid, &error_local)) {
-			g_warning ("failed to spawn: %s", error_local->message);
-			return FALSE;
-		}
-		g_debug ("started process %s with pid %i", priv->argv[0], priv->kde_helper_pid);
-		return TRUE;
-	}
 
 	/* listen to the socket */
 	if (!g_socket_listen (priv->socket, error))
