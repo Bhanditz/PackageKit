@@ -1972,6 +1972,12 @@ pk_client_create_helper_socket (PkClientState *state)
 	if (!ret)
 		return NULL;
 
+	socket_filename = g_build_filename(g_get_user_runtime_dir(), "debconf-socket", NULL);
+	if (g_file_test(socket_filename, G_FILE_TEST_EXISTS))
+		goto out;
+
+	g_free(socket_filename);
+
 	/* create object */
 	state->client_helper = pk_client_helper_new ();
 
@@ -1986,6 +1992,7 @@ pk_client_create_helper_socket (PkClientState *state)
 		return NULL;
 	}
 
+out:
 	/* success */
 	return g_strdup_printf ("frontend-socket=%s", socket_filename);
 }
