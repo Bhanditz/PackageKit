@@ -216,10 +216,16 @@ if test x$enable_systemd = xyes; then
 		    AS_HELP_STRING([--with-systemdsystemunitdir=DIR], [Directory for systemd service files]),
 		    [has_systemdsystemunitdir=$with_systemdsystemunitdir],
 		    [has_systemdsystemunitdir=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)])
-	AC_DEFINE(HAVE_SYSTEMD,1,[Build systemd code])
 	AC_SUBST([systemdsystemunitdir], [$has_systemdsystemunitdir])
+	AC_ARG_WITH([systemduserunitdir],
+		    AS_HELP_STRING([--with-systemduserunitdir=DIR], [Directory for systemd user service files]),
+		    [has_systemduserunitdir=$with_systemduserunitdir],
+		    [has_systemduserunitdir=$($PKG_CONFIG --variable=systemduserunitdir systemd)])
+	AC_SUBST([systemduserunitdir], [$has_systemduserunitdir])
+	AC_DEFINE(HAVE_SYSTEMD,1,[Build systemd code])
 fi
 AM_CONDITIONAL(HAVE_SYSTEMD, [test -n "$has_systemdsystemunitdir"])
+AM_CONDITIONAL(HAVE_SYSTEMD, [test -n "$has_systemduserunitdir"])
 
 dnl ---------------------------------------------------------------------------
 dnl - Use systemd offline update
@@ -599,6 +605,7 @@ echo "
         Cron scripts:              ${build_cron}
         python3:                   ${enable_python3}
         systemd system unit dir:   ${has_systemdsystemunitdir}
+        systemd user unit dir:     ${has_systemduserunitdir}
         Installing python backend: ${have_python_backend}
         python package dir:        ${with_python_package_dir}
 
